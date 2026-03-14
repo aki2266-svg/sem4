@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script>
+        function test(){
+        const obj={"name":"abc","age":"20","dob":"1997-08-14"}
+        obj1=new Date(obj.dob)
+        document.getElementById("p").innerHTML=obj1
+    }
+    </script>
+</head>
+<body>
+     <p id="p"></p>
+    <button onclick="test()">click here</button>
+</body>
+</html>
