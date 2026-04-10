@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Multi-Agent Observability Dashboard | TalentIntel AI</title>
+    <!-- Google Fonts + Font Awesome + Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #161d30;
+            font-family: 'Inter', sans-serif;
+            color: #eef2ff;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* glassmorphism cards */
+        .card {
+            background: rgba(22, 29, 48, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(38, 0, 251, 0.3);
+            padding: 1.5rem;
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .card:hover {
+            border-color: #ca5590;
+            box-shadow: 0 8px 20px rgba(202, 85, 144, 0.2);
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #ca5590);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .badge {
+            background: #2600fb20;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* 3 column layout */
+        .dashboard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .trace-log {
+            flex: 1.2;
+            min-width: 280px;
+        }
+        .waterfall {
+            flex: 1.5;
+            min-width: 300px;
+        }
+        .retry-monitor {
+            flex: 0.9;
+            min-width: 220px;
+        }
+
+        /* trace log - terminal style */
+        .log-container {
+            background: #0b1120;
+            border-radius: 1rem;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            padding: 0.8rem;
+        }
+        .log-entry {
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #2600fb20;
+            display: flex;
+            gap: 0.8rem;
+        }
+        .log-time {
+            color: #ca5590;
+            white-space: nowrap;
+        }
+        .log-agent {
+            font-weight: 600;
+            min-width: 140px;
+        }
+        .log-message {
+            color: #cbd5e1;
+        }
+        .log-icon {
+            width: 20px;
+            color: #7ec555;
+        }
+
+        /* waterfall canvas */
+        .waterfall-canvas {
+            width: 100%;
+            height: 250px;
+        }
+
+        /* retry monitor counters */
+        .retry-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .stat-card {
+            background: #0f172a;
+            border-radius: 1rem;
+            padding: 0.8rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+        .stat-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+        }
+        .retry-badge {
+            display: inline-block;
+            background: #ca5590;
+            border-radius: 2rem;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            margin-top: 0.3rem;
+        }
+        .graceful-badge {
+            background: #2600fb;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #6c7a8e;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <h1><i class="fas fa-project-diagram"></i> Multi-Agent Observability</h1>
+            <p>Real‑time traces · Latency waterfall · Retry & degradation metrics</p>
+        </div>
+        <div class="badge"><i class="fas fa-cogs"></i> Orchestrator: LangGraph (mock) · Live updates every 2s</div>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Agent Trace Log (real-time terminal) -->
+        <div class="trace-log card">
+            <h3><i class="fas fa-terminal" style="color:#ca5590;"></i> Agent Trace Log</h3>
+            <p style="font-size: 0.7rem; margin-bottom: 0.5rem;">Live activity stream from orchestration layer</p>
+            <div class="log-container" id="traceLog">
+                <div class="log-entry"><span class="log-time">--:--:--</span><span class="log-agent">System</span><span class="log-message">Waiting for agent traces...</span></div>
+            </div>
+        </div>
+
+        <!-- Latency Waterfall (Gantt-style) -->
+        <div class="waterfall card">
+            <h3><i class="fas fa-chart-waterfall" style="color:#ca5590;"></i> Latency Waterfall (ms)</h3>
+            <p style="font-size: 0.7rem; margin-bottom: 0.5rem;">Time per stage – identifies bottlenecks</p>
+            <canvas id="waterfallChart" width="400" height="200" class="waterfall-canvas"></canvas>
+        </div>
+
+        <!-- Retry Monitor + Graceful Degradation -->
+        <div class="retry-monitor card">
+            <h3><i class="fas fa-rotate-right" style="color:#ca5590;"></i> Retry Monitor</h3>
+            <p style="font-size: 0.7rem; margin-bottom: 1rem;">Agent failures & successful retries</p>
+            <div class="retry-stats" id="retryStats">
+                <!-- dynamic stats -->
+            </div>
+            <div id="gracefulIndicator" style="margin-top: 1rem; text-align: center; padding: 0.5rem; background: #0f172a; border-radius: 1rem;">
+                <i class="fas fa-check-circle" style="color:#7ec555;"></i> Graceful Degradation: ACTIVE
+            </div>
+        </div>
+    </div>
+    <footer>⚡ Orchestrator auto‑retries failed agents · Waterfall updates every 5s · Trace log shows each agent's "thinking" step</footer>
+</div>
+
+<script>
+    // ---------- Mock Agent Traces (simulate LangGraph/CrewAI) ----------
+    const agentNames = ["Parsing Agent", "Normalization Agent", "Matching Agent"];
+    const actions = [
+        "extracting text from PDF", "analysing layout", "normalising skills", 
+        "mapping synonyms", "computing embeddings", "semantic search", 
+        "weighted scoring", "gap analysis", "retrying due to timeout"
+    ];
+    
+    let traceEntries = [];
+    let failureCount = 0;
+    let retryCount = 0;
+    let successCount = 0;
+    
+    // Waterfall data (ms) – will be updated dynamically
+    let waterfallData = {
+        parsing: 245,
+        normalization: 312,
+        matching: 198
+    };
+    
+    // Chart instance
+    let waterfallChart = null;
+    
+    function initWaterfallChart() {
+        const ctx = document.getElementById('waterfallChart').getContext('2d');
+        waterfallChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Parsing Agent', 'Normalization Agent', 'Matching Agent'],
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: [waterfallData.parsing, waterfallData.normalization, waterfallData.matching],
+                    backgroundColor: ['#2600fb', '#ca5590', '#7ec555'],
+                    borderRadius: 8,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: { callbacks: { label: (ctx) => `${ctx.raw} ms` } },
+                    legend: { labels: { color: '#eef2ff' } }
+                },
+                scales: {
+                    y: { title: { display: true, text: 'Milliseconds', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#cbd5e1' } },
+                    x: { ticks: { color: '#cbd5e1' } }
+                }
+            }
+        });
+    }
+    
+    function updateWaterfallChart() {
+        if (waterfallChart) {
+            waterfallChart.data.datasets[0].data = [waterfallData.parsing, waterfallData.normalization, waterfallData.matching];
+            waterfallChart.update();
+        }
+    }
+    
+    // Add a trace log entry
+    function addTrace(agent, message, isError = false) {
+        const time = new Date().toLocaleTimeString();
+        traceEntries.unshift({ time, agent, message, isError });
+        // keep last 30 entries
+        if (traceEntries.length > 30) traceEntries.pop();
+        renderTraceLog();
+    }
+    
+    function renderTraceLog() {
+        const container = document.getElementById('traceLog');
+        if (traceEntries.length === 0) {
+            container.innerHTML = '<div class="log-entry"><span class="log-time">--:--:--</span><span class="log-agent">System</span><span class="log-message">No traces yet</span></div>';
+            return;
+        }
+        container.innerHTML = traceEntries.map(entry => `
+            <div class="log-entry">
+                <span class="log-time">${entry.time}</span>
+                <span class="log-agent" style="color:${entry.isError ? '#dc2626' : '#ca5590'}">${entry.agent}</span>
+                <span class="log-message">${entry.message}</span>
+                ${entry.isError ? '<i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i>' : '<i class="fas fa-play" style="color:#7ec555;"></i>'}
+            </div>
+        `).join('');
+        // auto-scroll to top (newest first)
+        container.scrollTop = 0;
+    }
+    
+    // Update retry monitor UI
+    function renderRetryMonitor() {
+        const container = document.getElementById('retryStats');
+        container.innerHTML = `
+            <div class="stat-card">
+                <div class="stat-value">${failureCount}</div>
+                <div class="stat-label">Agent Failures</div>
+                <span class="retry-badge"><i class="fas fa-times-circle"></i> last 5 min</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${retryCount}</div>
+                <div class="stat-label">Successful Retries</div>
+                <span class="retry-badge graceful-badge"><i class="fas fa-redo-alt"></i> auto‑recovered</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">${successCount}</div>
+                <div class="stat-label">Successful Tasks</div>
+                <span class="retry-badge" style="background:#7ec555;">completed</span>
+            </div>
+        `;
+        // update graceful indicator based on failure/retry ratio
+        const gracefulDiv = document.getElementById('gracefulIndicator');
+        if (retryCount >= failureCount && failureCount > 0) {
+            gracefulDiv.innerHTML = '<i class="fas fa-check-circle" style="color:#7ec555;"></i> Graceful Degradation: ACTIVE (retries working)';
+            gracefulDiv.style.borderLeft = '3px solid #7ec555';
+        } else if (failureCount > retryCount + 2) {
+            gracefulDiv.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:#ca5590;"></i> Graceful Degradation: DEGRADED (high failure rate)';
+            gracefulDiv.style.borderLeft = '3px solid #ca5590';
+        } else {
+            gracefulDiv.innerHTML = '<i class="fas fa-check-circle" style="color:#7ec555;"></i> Graceful Degradation: STABLE';
+        }
+    }
+    
+    // Simulate agent execution (real-time random traces)
+    let simulationInterval;
+    let waterfallInterval;
+    
+    function startSimulation() {
+        // every 2-3 seconds, add a trace from a random agent
+        simulationInterval = setInterval(() => {
+            const agent = agentNames[Math.floor(Math.random() * agentNames.length)];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            // random success or failure (10% failure rate to test retries)
+            const isFailure = Math.random() < 0.12; // 12% failure
+            let message = isFailure ? `⚠️ ${action} failed – triggering retry` : `${action} ... completed`;
+            if (agent === "Normalization Agent" && action.includes("mapping")) message = "Normalization Agent is mapping 15 skills to canonical taxonomy...";
+            if (agent === "Parsing Agent" && action.includes("extracting")) message = "Parsing Agent is extracting text from PDF (multi‑column layout)...";
+            if (agent === "Matching Agent" && action.includes("semantic")) message = "Matching Agent computing semantic embeddings vs job description...";
+            
+            addTrace(agent, message, isFailure);
+            
+            // update counters
+            if (isFailure) {
+                failureCount++;
+                // simulate a retry after failure (next tick)
+                setTimeout(() => {
+                    const retrySuccess = Math.random() > 0.3; // 70% retry success
+                    if (retrySuccess) {
+                        retryCount++;
+                        addTrace(agent, `🔄 Retry successful for ${action}`, false);
+                    } else {
+                        addTrace(agent, `❌ Retry also failed – escalating`, true);
+                        failureCount++;
+                    }
+                    renderRetryMonitor();
+                }, 800);
+            } else {
+                successCount++;
+            }
+            renderRetryMonitor();
+            
+            // update waterfall latencies randomly (simulate varying loads)
+            waterfallData.parsing = Math.floor(Math.random() * 150 + 180); // 180-330 ms
+            waterfallData.normalization = Math.floor(Math.random() * 200 + 250); // 250-450 ms
+            waterfallData.matching = Math.floor(Math.random() * 100 + 120); // 120-220 ms
+            updateWaterfallChart();
+        }, 2500);
+        
+        // also update waterfall every 5 seconds (more stable view)
+        waterfallInterval = setInterval(() => {
+            waterfallData.parsing = Math.floor(Math.random() * 150 + 180);
+            waterfallData.normalization = Math.floor(Math.random() * 200 + 250);
+            waterfallData.matching = Math.floor(Math.random() * 100 + 120);
+            updateWaterfallChart();
+        }, 5000);
+    }
+    
+    // Initial demo traces to show activity
+    function addInitialTraces() {
+        addTrace("Orchestrator", "Starting multi-agent pipeline for resume ID: res_1234", false);
+        setTimeout(() => addTrace("Parsing Agent", "Loading PDF document (3 pages) ...", false), 500);
+        setTimeout(() => addTrace("Parsing Agent", "Layout analysis: detected 2‑column format", false), 1500);
+        setTimeout(() => addTrace("Normalization Agent", "Extracted 18 raw skills → mapping to taxonomy", false), 2500);
+        setTimeout(() => addTrace("Normalization Agent", "Found synonyms: 'JS' → JavaScript, 'K8s' → Kubernetes", false), 3500);
+        setTimeout(() => addTrace("Matching Agent", "Computing semantic similarity with job description", false), 4500);
+        setTimeout(() => addTrace("Matching Agent", "Weighted score: 0.84 | Gap analysis ready", false), 5500);
+    }
+    
+    initWaterfallChart();
+    addInitialTraces();
+    startSimulation();
+    
+    // Cleanup on page unload (optional but good practice)
+    window.addEventListener('beforeunload', () => {
+        if (simulationInterval) clearInterval(simulationInterval);
+        if (waterfallInterval) clearInterval(waterfallInterval);
+    });
+</script>
+</body>
+</html>

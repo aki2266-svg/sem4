@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Semantic Match Analytics | TalentIntel AI</title>
+    <!-- Google Fonts + Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #161d30;
+            font-family: 'Inter', sans-serif;
+            color: #eef2ff;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        /* glassmorphism cards */
+        .card {
+            background: rgba(22, 29, 48, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(38, 0, 251, 0.3);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            border-color: #ca5590;
+            box-shadow: 0 8px 20px rgba(202, 85, 144, 0.2);
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #ca5590);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .badge {
+            background: #2600fb20;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* candidate summary */
+        .candidate-summary {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            background: #0f172a;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* heatmap table */
+        .heatmap-wrapper {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        .heatmap-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 500px;
+        }
+        .heatmap-table th, .heatmap-table td {
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+            border: 1px solid #2600fb30;
+        }
+        .heatmap-table th {
+            background: #0f172a;
+            font-weight: 600;
+            color: #ca5590;
+        }
+        .match-cell {
+            position: relative;
+            cursor: help;
+            font-weight: 500;
+            transition: transform 0.1s;
+        }
+        .match-cell:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+        .tooltip-text {
+            visibility: hidden;
+            background-color: #2600fb;
+            color: white;
+            border-radius: 6px;
+            padding: 4px 8px;
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        .match-cell:hover .tooltip-text {
+            visibility: visible;
+        }
+        .legend {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            justify-content: center;
+        }
+        .legend span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+
+        /* experience depth list */
+        .skill-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #2600fb20;
+        }
+        .skill-name {
+            font-weight: 600;
+            width: 120px;
+        }
+        .exp-bar-container {
+            flex: 2;
+            min-width: 150px;
+        }
+        .exp-bar {
+            background: #1e2a3e;
+            border-radius: 1rem;
+            height: 8px;
+            overflow: hidden;
+        }
+        .exp-fill {
+            background: #2600fb;
+            height: 100%;
+            border-radius: 1rem;
+            width: 0%;
+        }
+        .skill-years {
+            background: #2600fb;
+            border-radius: 2rem;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            width: 70px;
+            text-align: center;
+        }
+        .skill-proficiency {
+            width: 50px;
+            text-align: right;
+            font-size: 0.8rem;
+        }
+
+        /* gap analysis */
+        .gap-item {
+            background: #0f172a;
+            border-radius: 1rem;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            border-left: 3px solid #ca5590;
+        }
+        .learn-score {
+            display: inline-block;
+            background: #2600fb;
+            border-radius: 2rem;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        /* overall match card */
+        .match-score-ring {
+            text-align: center;
+            background: linear-gradient(135deg, #2600fb20, #ca559020);
+            border-radius: 2rem;
+            padding: 1.2rem;
+        }
+        .overall-score {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0.5rem 0;
+        }
+        button {
+            background: #2600fb;
+            border: none;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #ca5590;
+            transform: translateY(-2px);
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #6c7a8e;
+        }
+        @media (max-width: 700px) {
+            body { padding: 1rem; }
+            .skill-item { flex-direction: column; align-items: flex-start; }
+            .exp-bar-container { width: 100%; }
+            .skill-name, .skill-years, .skill-proficiency { width: auto; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <h1><i class="fas fa-chart-network"></i> Semantic Match Analytics</h1>
+            <p>Explainable matching · Semantic heatmap · Experience depth · Upskilling intelligence</p>
+        </div>
+        <div class="badge"><i class="fas fa-robot"></i> Matching Agent v2.4 · Explainable AI</div>
+    </div>
+
+    <!-- Candidate & Job Summary -->
+    <div class="card" style="padding: 1rem;">
+        <div class="candidate-summary">
+            <div><i class="fas fa-user-circle" style="color:#ca5590;"></i> <strong>Candidate:</strong> Sarah Chen · Senior ML Engineer</div>
+            <div><i class="fas fa-briefcase"></i> <strong>Target Role:</strong> Lead AI Engineer (TechInnovate)</div>
+            <div><i class="fas fa-calendar"></i> Experience: 7+ years total</div>
+        </div>
+    </div>
+
+    <!-- 1. Semantic Heatmap (full width) -->
+    <div class="card">
+        <h3><i class="fas fa-fire" style="color:#ca5590;"></i> Semantic Heatmap</h3>
+        <p style="font-size: 0.75rem; margin-bottom: 0.5rem;">Job Requirements vs Candidate Skills · Colour = match type</p>
+        <div class="heatmap-wrapper">
+            <table class="heatmap-table" id="heatmapTable">
+                <thead id="heatmapHeader"></thead>
+                <tbody id="heatmapBody"></tbody>
+            </table>
+        </div>
+        <div class="legend">
+            <span><span style="background:#2600fb;"></span> Direct Match</span>
+            <span><span style="background:#ca5590;"></span> Semantic/Related</span>
+            <span><span style="background:#334155;"></span> No Match</span>
+        </div>
+    </div>
+
+    <!-- 2. Experience Depth Indicators (vertical list) -->
+    <div class="card">
+        <h3><i class="fas fa-chart-line" style="color:#ca5590;"></i> Experience Depth Indicators</h3>
+        <p style="font-size: 0.75rem; margin-bottom: 1rem;">Agent‑calculated years & proficiency · Progress bar = relative seniority</p>
+        <div id="experienceDepthList"></div>
+    </div>
+
+    <!-- 3. Gap Analysis & Upskilling -->
+    <div class="card">
+        <h3><i class="fas fa-search-minus" style="color:#ca5590;"></i> Gap Analysis & Missing Skills</h3>
+        <p style="font-size: 0.75rem;">Required skills not met + “Potential to Learn” score based on adjacent expertise</p>
+        <div id="gapAnalysisList"></div>
+    </div>
+
+    <!-- 4. Overall Match Score + Explanation -->
+    <div class="card">
+        <div class="match-score-ring">
+            <h3>Overall Semantic Match</h3>
+            <div class="overall-score" id="overallScore">84%</div>
+            <div style="font-size: 0.85rem;"><i class="fas fa-info-circle"></i> <span id="matchExplanation">Strong alignment in core ML & Python; missing Kubernetes can be upskilled quickly.</span></div>
+            <button id="refreshBtn" style="margin-top: 1rem;"><i class="fas fa-sync-alt"></i> Re-run Matching Agent</button>
+        </div>
+        <div style="margin-top: 1rem; background: #0f172a; border-radius: 1rem; padding: 0.8rem;">
+            <i class="fas fa-lightbulb" style="color:#ca5590;"></i> <strong>Why this fit?</strong> The agent found <strong>direct matches</strong> for Python, React, and Machine Learning, plus <strong>semantic relations</strong> (AWS → cloud, Docker → containers). Missing skills have high learnability due to adjacent experience.
+        </div>
+    </div>
+
+    <footer>⚡ Multi‑Agent Matching · Semantic embeddings + years weighting · Explainable gap analysis</footer>
+</div>
+
+<script>
+    // ---------- Mock Data (Candidate Skills + Job Requirements) ----------
+    const candidateSkills = [
+        { name: "Python", years: 5, proficiency: 0.92, category: "programming" },
+        { name: "React", years: 3, proficiency: 0.78, category: "frontend" },
+        { name: "AWS", years: 2, proficiency: 0.65, category: "cloud" },
+        { name: "Machine Learning", years: 4, proficiency: 0.88, category: "ai" },
+        { name: "Docker", years: 1, proficiency: 0.55, category: "devops" },
+        { name: "TensorFlow", years: 0, proficiency: 0.3, category: "ai" }
+    ];
+
+    const jobRequirements = [
+        { name: "Python", importance: "required", category: "programming" },
+        { name: "React", importance: "required", category: "frontend" },
+        { name: "AWS", importance: "nice-to-have", category: "cloud" },
+        { name: "Kubernetes", importance: "nice-to-have", category: "devops" },
+        { name: "TensorFlow", importance: "required", category: "ai" },
+        { name: "Docker", importance: "nice-to-have", category: "devops" }
+    ];
+
+    // Semantic mapping (related skills)
+    const semanticMap = {
+        "Python": ["Python", "Pandas", "NumPy", "Django"],
+        "React": ["React", "Vue", "Angular", "JavaScript"],
+        "AWS": ["AWS", "Azure", "GCP", "Cloud"],
+        "Kubernetes": ["Kubernetes", "Docker", "Container", "OpenShift"],
+        "TensorFlow": ["TensorFlow", "PyTorch", "Machine Learning", "Keras"],
+        "Docker": ["Docker", "Kubernetes", "Container", "Podman"]
+    };
+
+    // Helper: determine match type
+    function getMatchType(jobSkill, candidateSkill) {
+        if (jobSkill.toLowerCase() === candidateSkill.toLowerCase()) return "direct";
+        const related = semanticMap[jobSkill] || [];
+        if (related.some(r => r.toLowerCase() === candidateSkill.toLowerCase())) return "semantic";
+        const reverseRelated = semanticMap[candidateSkill] || [];
+        if (reverseRelated.some(r => r.toLowerCase() === jobSkill.toLowerCase())) return "semantic";
+        return "none";
+    }
+
+    // Build Semantic Heatmap
+    function buildHeatmap() {
+        const reqSkills = jobRequirements.map(r => r.name);
+        const candSkills = candidateSkills.map(c => c.name);
+        
+        const thead = document.getElementById('heatmapHeader');
+        thead.innerHTML = `<th>Job \\ Candidate</th>` + candSkills.map(skill => `<th>${skill}</th>`).join('');
+        
+        const tbody = document.getElementById('heatmapBody');
+        tbody.innerHTML = '';
+        for (let req of reqSkills) {
+            let row = `<tr><td style="font-weight:600; background:#0f172a;">${req}</td>`;
+            for (let cand of candSkills) {
+                const match = getMatchType(req, cand);
+                let color = '';
+                let symbol = '';
+                let label = '';
+                if (match === 'direct') {
+                    color = '#2600fb';
+                    symbol = '✓';
+                    label = 'Direct match';
+                } else if (match === 'semantic') {
+                    color = '#ca5590';
+                    symbol = '≈';
+                    label = 'Semantic/related';
+                } else {
+                    color = '#334155';
+                    symbol = '✗';
+                    label = 'No match';
+                }
+                row += `<td class="match-cell" style="background:${color}80; position:relative;">
+                            ${symbol}
+                            <span class="tooltip-text">${label}</span>
+                        </td>`;
+            }
+            row += `</tr>`;
+            tbody.innerHTML += row;
+        }
+    }
+
+    // Render Experience Depth (vertical layout with progress bars)
+    function renderExperienceDepth() {
+        const container = document.getElementById('experienceDepthList');
+        const maxYears = Math.max(...candidateSkills.map(s => s.years), 1);
+        container.innerHTML = candidateSkills.map(skill => {
+            const percent = (skill.years / maxYears) * 100;
+            let barColor = skill.years >= 4 ? '#2600fb' : (skill.years >= 2 ? '#ca5590' : '#6c7a8e');
+            return `
+                <div class="skill-item">
+                    <div class="skill-name"><strong>${skill.name}</strong></div>
+                    <div class="exp-bar-container">
+                        <div class="exp-bar"><div class="exp-fill" style="width: ${percent}%; background:${barColor};"></div></div>
+                    </div>
+                    <div class="skill-years" style="background:${barColor};">${skill.years} yrs</div>
+                    <div class="skill-proficiency">${Math.round(skill.proficiency * 100)}%</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Gap Analysis: missing required skills + Potential to Learn score
+    function renderGapAnalysis() {
+        const requiredJobSkills = jobRequirements.filter(r => r.importance === 'required').map(r => r.name);
+        const candidateSkillNames = candidateSkills.map(c => c.name.toLowerCase());
+        const missing = requiredJobSkills.filter(req => !candidateSkillNames.includes(req.toLowerCase()));
+        
+        const container = document.getElementById('gapAnalysisList');
+        if (missing.length === 0) {
+            container.innerHTML = '<div class="gap-item">✅ No missing required skills! Perfect match.</div>';
+            return;
+        }
+        
+        const gapItems = missing.map(missingSkill => {
+            // find candidate's proficiency in related skills
+            const related = semanticMap[missingSkill] || [];
+            let maxRelatedProficiency = 0;
+            for (let cand of candidateSkills) {
+                if (related.some(r => r.toLowerCase() === cand.name.toLowerCase())) {
+                    maxRelatedProficiency = Math.max(maxRelatedProficiency, cand.proficiency);
+                }
+                // special heuristic: Kubernetes ↔ Docker, TensorFlow ↔ Machine Learning
+                if (missingSkill.toLowerCase() === 'kubernetes' && cand.name.toLowerCase() === 'docker') maxRelatedProficiency = Math.max(maxRelatedProficiency, cand.proficiency * 0.9);
+                if (missingSkill.toLowerCase() === 'tensorflow' && cand.name.toLowerCase() === 'machine learning') maxRelatedProficiency = Math.max(maxRelatedProficiency, cand.proficiency * 0.85);
+            }
+            let learnScore = Math.min(100, Math.round(maxRelatedProficiency * 100 + 15));
+            learnScore = isNaN(learnScore) ? 45 : learnScore;
+            let suggestion = '';
+            if (missingSkill === 'Kubernetes') suggestion = 'Candidate has Docker experience → quick upskill path.';
+            else if (missingSkill === 'TensorFlow') suggestion = 'Strong ML background; transition to TensorFlow is feasible.';
+            else suggestion = 'Related skills detected, learning curve moderate.';
+            return { name: missingSkill, learnScore, suggestion };
+        });
+        
+        container.innerHTML = gapItems.map(gap => `
+            <div class="gap-item">
+                <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+                    <strong>❌ ${gap.name}</strong>
+                    <span class="learn-score">Potential to learn: ${gap.learnScore}%</span>
+                </div>
+                <div style="font-size:0.75rem; margin-top:0.4rem;">${gap.suggestion}</div>
+                <div class="exp-bar" style="margin-top:0.5rem;"><div class="exp-fill" style="width: ${gap.learnScore}%; background:#ca5590;"></div></div>
+            </div>
+        `).join('');
+    }
+
+    // Compute overall match score (weighted, includes experience depth bonus)
+    function computeOverallScore() {
+        let totalWeight = 0;
+        let weightedScore = 0;
+        for (let req of jobRequirements) {
+            let bestMatchType = 'none';
+            for (let cand of candidateSkills) {
+                const match = getMatchType(req.name, cand.name);
+                if (match === 'direct') bestMatchType = 'direct';
+                else if (match === 'semantic' && bestMatchType !== 'direct') bestMatchType = 'semantic';
+            }
+            let weight = req.importance === 'required' ? 2 : 1;
+            let matchValue = bestMatchType === 'direct' ? 1.0 : (bestMatchType === 'semantic' ? 0.7 : 0.2);
+            totalWeight += weight;
+            weightedScore += matchValue * weight;
+        }
+        let rawScore = (weightedScore / totalWeight) * 100;
+        const avgExp = candidateSkills.reduce((sum, s) => sum + s.years, 0) / candidateSkills.length;
+        let expBonus = Math.min(10, avgExp * 1.2);
+        let finalScore = Math.min(99, Math.round(rawScore + expBonus));
+        document.getElementById('overallScore').innerHTML = finalScore + '%';
+        let explanation = '';
+        if (finalScore >= 80) explanation = 'Strong semantic alignment in core skills. Missing requirements have high learnability.';
+        else if (finalScore >= 65) explanation = 'Good fit with some semantic matches; upskilling recommended for missing key skills.';
+        else explanation = 'Significant gaps; consider training or different role alignment.';
+        document.getElementById('matchExplanation').innerHTML = explanation;
+    }
+
+    // Refresh all components (simulate agent re-run)
+    function refreshAnalytics() {
+        // Optional: randomize years slightly for demonstration
+        candidateSkills.forEach(skill => {
+            if (skill.name === 'Docker') skill.years = 1.2;
+            if (skill.name === 'Machine Learning') skill.proficiency = 0.89;
+        });
+        buildHeatmap();
+        renderExperienceDepth();
+        renderGapAnalysis();
+        computeOverallScore();
+        const btn = document.getElementById('refreshBtn');
+        btn.style.transform = 'scale(0.98)';
+        setTimeout(() => btn.style.transform = '', 200);
+    }
+
+    // Initial render
+    buildHeatmap();
+    renderExperienceDepth();
+    renderGapAnalysis();
+    computeOverallScore();
+
+    document.getElementById('refreshBtn').addEventListener('click', refreshAnalytics);
+</script>
+</body>
+</html>

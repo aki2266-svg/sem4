@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Parsing Workbench | AI Resume Parser</title>
+    <!-- PDF.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- Font Awesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #161d30;
+            font-family: 'Inter', sans-serif;
+            color: #eef2ff;
+            padding: 1.5rem;
+        }
+
+        /* main container */
+        .workbench {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #2600fb40;
+            padding-bottom: 1rem;
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #ca5590);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .title p {
+            color: #a0aec0;
+            font-size: 0.85rem;
+        }
+        .upload-area {
+            background: #1e2a3e;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            border: 1px solid #2600fb;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .upload-area label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .upload-area input {
+            display: none;
+        }
+        .btn {
+            background: #2600fb;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #ca5590;
+            color: #ca5590;
+        }
+        .btn-outline:hover {
+            background: #ca559020;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+
+        /* side-by-side layout */
+        .split-view {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+        .pdf-panel {
+            flex: 1.2;
+            min-width: 280px;
+            background: #0f172a;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.4);
+            border: 1px solid #2600fb30;
+        }
+        .json-panel {
+            flex: 0.9;
+            min-width: 280px;
+            background: #0f172a;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            border: 1px solid #ca559030;
+            overflow-y: auto;
+            max-height: 85vh;
+        }
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-left: 4px solid #2600fb;
+            padding-left: 0.75rem;
+        }
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            background: #1e293b;
+            border-radius: 1rem;
+            overflow: auto;
+            text-align: center;
+        }
+        #pdfCanvas {
+            width: 100%;
+            height: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border-radius: 0.5rem;
+        }
+        .overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .json-view {
+            font-family: 'Menlo', monospace;
+            font-size: 0.85rem;
+            background: #0b1120;
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-top: 0.5rem;
+        }
+        .json-field {
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #2600fb20;
+            padding-bottom: 0.5rem;
+        }
+        .field-label {
+            font-weight: 700;
+            color: #ca5590;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+        }
+        .field-value {
+            font-weight: 500;
+            word-break: break-word;
+            margin-top: 0.2rem;
+        }
+        .confidence-badge {
+            display: inline-block;
+            margin-left: 0.75rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .conf-high { background-color: #2600fb; color: white; }
+        .conf-mid { background-color: #ca5590; color: white; }
+        .conf-low { background-color: #dc2626; color: white; }
+        .status-msg {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            text-align: center;
+            color: #94a3b8;
+        }
+        .legend {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            justify-content: center;
+        }
+        .legend span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 4px;
+        }
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #5b6e8c;
+        }
+        @media (max-width: 800px) {
+            body { padding: 0.8rem; }
+            .split-view { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="workbench">
+    <div class="header">
+        <div class="title">
+            <h1><i class="fas fa-brain"></i> Parsing Workbench</h1>
+            <p>Multi-Agent Extraction · Side‑by‑Side Validation · Bounding Box Overlay</p>
+        </div>
+        <div class="upload-area">
+            <label for="pdfInput" class="btn btn-outline"><i class="fas fa-file-pdf"></i> Upload PDF</label>
+            <input type="file" id="pdfInput" accept="application/pdf">
+            <button id="demoBtn" class="btn"><i class="fas fa-chalkboard-user"></i> Load Sample</button>
+        </div>
+    </div>
+
+    <div class="split-view">
+        <!-- LEFT: PDF with overlay canvas -->
+        <div class="pdf-panel">
+            <div class="panel-title"><i class="fas fa-file-alt"></i> Original Document</div>
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="pdfCanvas" style="width:100%; height:auto;"></canvas>
+                <canvas id="overlayCanvas" class="overlay-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+            </div>
+            <div class="legend">
+                <span style="background:#2600fb;"></span> High confidence (>79%)
+                <span style="background:#ca5590;"></span> Medium (60-79%)
+                <span style="background:#dc2626;"></span> Low (<60%)
+            </div>
+            <div id="parseStatus" class="status-msg"><i class="fas fa-info-circle"></i> Upload a PDF or click "Load Sample"</div>
+        </div>
+
+        <!-- RIGHT: Extracted JSON with confidence -->
+        <div class="json-panel">
+            <div class="panel-title"><i class="fas fa-code-branch"></i> Extracted Entities (Agent Output)</div>
+            <div id="extractedJson" class="json-view">
+                <div class="json-field"><span class="field-label">📌 Status</span><div class="field-value">Waiting for document...</div></div>
+            </div>
+        </div>
+    </div>
+    <footer>⚡ Bounding boxes highlight extraction locations • Confidence colouring guides review • Works with any PDF resume</footer>
+</div>
+
+<script>
+    // Configure PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    let currentPdfData = null;
+    let currentPage = null;
+    let currentScale = 1.5;      // for high-res overlay
+    let textItems = [];           // store {str, x, y, width, height}
+    let pageDimensions = { width: 0, height: 0 };
+
+    // DOM elements
+    const fileInput = document.getElementById('pdfInput');
+    const demoBtn = document.getElementById('demoBtn');
+    const pdfCanvas = document.getElementById('pdfCanvas');
+    const overlayCanvas = document.getElementById('overlayCanvas');
+    const canvasContainer = document.getElementById('canvasContainer');
+    const extractedJsonDiv = document.getElementById('extractedJson');
+
+    // Helper: render PDF page & extract text items with coordinates
+    async function renderPDFPage(arrayBuffer, pageNum = 1) {
+        try {
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(pageNum);
+            currentPage = page;
+            const viewport = page.getViewport({ scale: currentScale });
+            pageDimensions.width = viewport.width;
+            pageDimensions.height = viewport.height;
+
+            // set canvas size
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+            pdfCanvas.style.width = '100%';
+            pdfCanvas.style.height = 'auto';
+            overlayCanvas.width = viewport.width;
+            overlayCanvas.height = viewport.height;
+            overlayCanvas.style.width = '100%';
+            overlayCanvas.style.height = '100%';
+
+            const renderContext = {
+                canvasContext: pdfCanvas.getContext('2d'),
+                viewport: viewport,
+            };
+            await page.render(renderContext).promise;
+
+            // Extract text content with positions
+            const textContent = await page.getTextContent();
+            const items = textContent.items;
+            const textPositions = [];
+            for (let item of items) {
+                if (item.str && item.transform) {
+                    const tx = item.transform[4];
+                    const ty = viewport.height - item.transform[5]; // convert to canvas coords
+                    const width = item.width * currentScale;
+                    const height = (item.height || 12) * currentScale;
+                    textPositions.push({
+                        str: item.str,
+                        x: tx,
+                        y: ty - height,
+                        width: width,
+                        height: height,
+                        rawY: ty
+                    });
+                }
+            }
+            textItems = textPositions;
+            return { page, viewport, textItems };
+        } catch (err) {
+            console.error("PDF render error", err);
+            document.getElementById('parseStatus').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error loading PDF: ${err.message}`;
+            throw err;
+        }
+    }
+
+    // Mock but intelligent extraction: uses regex + heuristics on concatenated text
+    function extractEntitiesFromText(fullText, textItemsWithCoords) {
+        // basic extraction logic (simulates parsing agent)
+        const namePattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/;
+        const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+        const phonePattern = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/;
+        const experienceKeywords = /(experience|work|employment|role|position|senior|lead|engineer|analyst|manager)/i;
+        
+        let name = "Unknown";
+        let email = "";
+        let phone = "";
+        let experience = "";
+        let education = "";
+        
+        // find name (first strong candidate line)
+        const lines = fullText.split('\n');
+        for (let line of lines) {
+            if (namePattern.test(line) && line.length < 60 && !line.includes('@')) {
+                name = line.trim();
+                break;
+            }
+        }
+        const emailMatch = fullText.match(emailPattern);
+        if (emailMatch) email = emailMatch[0];
+        const phoneMatch = fullText.match(phonePattern);
+        if (phoneMatch) phone = phoneMatch[0];
+        
+        // experience block: after keyword
+        let expSentences = [];
+        let eduSentences = [];
+        for (let i = 0; i < lines.length; i++) {
+            if (experienceKeywords.test(lines[i]) && lines[i+1]) {
+                expSentences.push(lines[i+1].substring(0, 200));
+            }
+            if (/education|university|bachelor|master|b\.sc|m\.sc|b\.tech/i.test(lines[i])) {
+                eduSentences.push(lines[i+1]?.substring(0, 150) || lines[i]);
+            }
+        }
+        experience = expSentences.slice(0,2).join('; ') || "Not explicitly extracted";
+        education = eduSentences.slice(0,2).join('; ') || "Not found";
+        
+        // Confidence scores: simulated based on pattern clarity
+        let nameConf = name !== "Unknown" ? (name.split(' ').length >= 2 ? 0.92 : 0.68) : 0.35;
+        let emailConf = email ? 0.98 : 0.10;
+        let expConf = experience !== "Not explicitly extracted" ? 0.74 : 0.42;
+        let eduConf = education !== "Not found" ? 0.71 : 0.38;
+        
+        // Also extract skills (simple)
+        const skillKeywords = ['python', 'javascript', 'react', 'java', 'sql', 'aws', 'docker', 'kubernetes', 'tensorflow'];
+        let skills = [];
+        for (let kw of skillKeywords) {
+            if (fullText.toLowerCase().includes(kw)) skills.push(kw);
+        }
+        let skillsConf = skills.length > 0 ? 0.85 : 0.20;
+        
+        // build result object
+        const extracted = {
+            personal_info: { name, email, phone, confidence: { name: nameConf, email: emailConf, phone: 0.75 } },
+            work_experience: { summary: experience, confidence: expConf },
+            education: { summary: education, confidence: eduConf },
+            skills: { list: skills, confidence: skillsConf }
+        };
+        
+        // For bounding boxes: find text items that match name, email, experience keywords
+        const nameItems = findTextItemsContaining(name, textItemsWithCoords);
+        const emailItems = findTextItemsContaining(email, textItemsWithCoords);
+        const expItems = findTextItemsContaining(experience.substring(0, 50), textItemsWithCoords);
+        const skillItems = findTextItemsContaining(skills[0] || "python", textItemsWithCoords);
+        
+        return { extracted, boundingBoxMap: { nameItems, emailItems, expItems, skillItems, confidenceMap: { nameConf, emailConf, expConf, eduConf, skillsConf } } };
+    }
+    
+    function findTextItemsContaining(substring, items, threshold=0.6) {
+        if (!substring || substring.length < 3) return [];
+        const lowerSub = substring.toLowerCase();
+        return items.filter(item => item.str.toLowerCase().includes(lowerSub) || lowerSub.includes(item.str.toLowerCase()));
+    }
+    
+    // Draw bounding boxes on overlay canvas
+    function drawBoundingBoxes(boundingBoxMap, confidenceMap) {
+        const ctx = overlayCanvas.getContext('2d');
+        ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        if (!boundingBoxMap) return;
+        
+        // helper to draw rect for each item
+        const drawItems = (items, confidence, colorHigh, colorMid, colorLow) => {
+            let boxColor;
+            if (confidence >= 0.8) boxColor = colorHigh;
+            else if (confidence >= 0.6) boxColor = colorMid;
+            else boxColor = colorLow;
+            ctx.strokeStyle = boxColor;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([5, 5]);
+            for (let item of items) {
+                if (item.x && item.y && item.width && item.height) {
+                    ctx.strokeRect(item.x, item.y, item.width, item.height);
+                    // optional semi fill
+                    ctx.fillStyle = boxColor + '20';
+                    ctx.fillRect(item.x, item.y, item.width, item.height);
+                }
+            }
+        };
+        
+        // confidence values
+        const nameConf = confidenceMap.nameConf || 0;
+        const emailConf = confidenceMap.emailConf || 0;
+        const expConf = confidenceMap.expConf || 0;
+        const skillConf = confidenceMap.skillsConf || 0;
+        
+        drawItems(boundingBoxMap.nameItems || [], nameConf, '#2600fb', '#ca5590', '#dc2626');
+        drawItems(boundingBoxMap.emailItems || [], emailConf, '#2600fb', '#ca5590', '#dc2626');
+        drawItems(boundingBoxMap.expItems || [], expConf, '#2600fb', '#ca5590', '#dc2626');
+        drawItems(boundingBoxMap.skillItems || [], skillConf, '#2600fb', '#ca5590', '#dc2626');
+        
+        // also add a small label near first box
+        if (boundingBoxMap.nameItems?.[0]) {
+            ctx.font = "bold 12px 'Inter'";
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowBlur = 0;
+            ctx.fillText("📛 Name", boundingBoxMap.nameItems[0].x, boundingBoxMap.nameItems[0].y - 3);
+        }
+    }
+    
+    // Render JSON panel with colour-coded confidence
+    function renderJsonPanel(extractedData, confidenceMap) {
+        const data = extractedData;
+        const getConfClass = (conf) => {
+            if (conf >= 0.8) return 'conf-high';
+            if (conf >= 0.6) return 'conf-mid';
+            return 'conf-low';
+        };
+        const formatConf = (conf) => `${Math.round(conf*100)}%`;
+        
+        const html = `
+            <div class="json-field">
+                <span class="field-label"><i class="fas fa-user"></i> PERSONAL INFO</span>
+                <div class="field-value">Name: ${data.personal_info.name} <span class="confidence-badge ${getConfClass(data.personal_info.confidence.name)}">${formatConf(data.personal_info.confidence.name)}</span></div>
+                <div class="field-value">Email: ${data.personal_info.email || '—'} <span class="confidence-badge ${getConfClass(data.personal_info.confidence.email)}">${formatConf(data.personal_info.confidence.email)}</span></div>
+                <div class="field-value">Phone: ${data.personal_info.phone || '—'} <span class="confidence-badge ${getConfClass(data.personal_info.confidence.phone)}">${formatConf(data.personal_info.confidence.phone)}</span></div>
+            </div>
+            <div class="json-field">
+                <span class="field-label"><i class="fas fa-briefcase"></i> WORK EXPERIENCE</span>
+                <div class="field-value">${data.work_experience.summary} <span class="confidence-badge ${getConfClass(confidenceMap.expConf)}">${formatConf(confidenceMap.expConf)}</span></div>
+            </div>
+            <div class="json-field">
+                <span class="field-label"><i class="fas fa-graduation-cap"></i> EDUCATION</span>
+                <div class="field-value">${data.education.summary} <span class="confidence-badge ${getConfClass(confidenceMap.eduConf)}">${formatConf(confidenceMap.eduConf)}</span></div>
+            </div>
+            <div class="json-field">
+                <span class="field-label"><i class="fas fa-microchip"></i> SKILLS</span>
+                <div class="field-value">${data.skills.list.length ? data.skills.list.join(', ') : 'No technical skills detected'} <span class="confidence-badge ${getConfClass(confidenceMap.skillsConf)}">${formatConf(confidenceMap.skillsConf)}</span></div>
+            </div>
+            <div class="json-field">
+                <span class="field-label"><i class="fas fa-chart-line"></i> PARSING METRICS</span>
+                <div class="field-value" style="font-size:0.75rem;">🔍 Agent used layout + NLP · Bounding boxes highlight extracted spans</div>
+            </div>
+        `;
+        extractedJsonDiv.innerHTML = html;
+    }
+    
+    // Main orchestration: load PDF buffer, render, run extraction, draw boxes
+    async function processPdf(arrayBuffer) {
+        try {
+            document.getElementById('parseStatus').innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Parsing agent running... extracting text & bounding boxes';
+            // render page and get text items
+            await renderPDFPage(arrayBuffer, 1);
+            // build full text
+            const fullText = textItems.map(t => t.str).join(' ');
+            // run extraction agent
+            const { extracted, boundingBoxMap } = extractEntitiesFromText(fullText, textItems);
+            const confidenceMap = boundingBoxMap.confidenceMap;
+            // draw boxes
+            drawBoundingBoxes(boundingBoxMap, confidenceMap);
+            // render right panel
+            renderJsonPanel(extracted, confidenceMap);
+            document.getElementById('parseStatus').innerHTML = '<i class="fas fa-check-circle" style="color:#ca5590;"></i> Parsing complete · Hover overlays show extraction zones';
+        } catch (err) {
+            console.error(err);
+            document.getElementById('parseStatus').innerHTML = `<i class="fas fa-exclamation-triangle"></i> Parsing failed: ${err.message}`;
+            extractedJsonDiv.innerHTML = `<div class="json-field"><span class="field-label">⚠️ Error</span><div>Could not process PDF. ${err.message}</div></div>`;
+        }
+    }
+    
+    // handle file upload
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const arrayBuffer = event.target.result;
+            await processPdf(arrayBuffer);
+        };
+        reader.readAsArrayBuffer(file);
+    });
+    
+    // demo sample: use a publicly available sample resume PDF (small, safe)
+    demoBtn.addEventListener('click', async () => {
+        // sample PDF from a reliable CDN (Sample Resume)
+        const sampleUrl = 'https://www.antennahouse.com/hubfs/xsl-fo-sample/pdf/basic/basic-link-1.pdf'; // not resume specific, but works for demo
+        // but for better resume demo, we use a direct sample pdf from github (simple resume)
+        // Let's use a known resume PDF from a public repo (safe)
+        const resumeSample = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'; 
+        // above is dummy; instead we embed a base64 demo? better use one with text.
+        // Real resume-like: "https://filesamples.com/samples/document/pdf/sample3.pdf" (contains lorem)
+        const betterSample = 'https://www.africau.edu/images/default/sample.pdf';
+        try {
+            const response = await fetch(betterSample);
+            if (!response.ok) throw new Error('Network error');
+            const buffer = await response.arrayBuffer();
+            await processPdf(buffer);
+        } catch(err) {
+            document.getElementById('parseStatus').innerHTML = 'Demo load failed. Please upload your own PDF.';
+            console.warn(err);
+        }
+    });
+    
+    // adjust overlay canvas size when container resizes (maintains coordinates because absolute positioning uses same canvas dimensions)
+    window.addEventListener('resize', () => {
+        if (currentPage) {
+            // reapply overlay scaling (already absolute, no transform needed)
+            const containerRect = canvasContainer.getBoundingClientRect();
+            // overlay canvas already matches pdfCanvas size, keep as is.
+        }
+    });
+    
+    // initial instruction
+    extractedJsonDiv.innerHTML = `<div class="json-field"><span class="field-label">📌 READY</span><div class="field-value">Upload a PDF resume. The parsing agent will extract entities, show bounding boxes (coloured by confidence) and present side-by-side validation.</div></div>`;
+</script>
+</body>
+</html>

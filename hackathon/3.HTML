@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Skill Normalization & Taxonomy Visualizer | TalentIntel AI</title>
+    <!-- Google Fonts + Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #161d30;
+            font-family: 'Inter', sans-serif;
+            color: #eef2ff;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* glassmorphism cards */
+        .card {
+            background: rgba(22, 29, 48, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(38, 0, 251, 0.3);
+            padding: 1.5rem;
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .card:hover {
+            border-color: #ca5590;
+            box-shadow: 0 8px 20px rgba(202, 85, 144, 0.2);
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #ca5590);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .badge {
+            background: #2600fb20;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        /* two column layout */
+        .two-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+        .normalized-skills {
+            flex: 2;
+            min-width: 260px;
+        }
+        .emerging-inbox {
+            flex: 1.2;
+            min-width: 260px;
+        }
+
+        /* skill card */
+        .skill-card {
+            background: #0f172a;
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2600fb;
+            transition: all 0.2s;
+        }
+        .skill-card:hover {
+            border-left-color: #ca5590;
+            transform: translateX(4px);
+        }
+        .skill-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: inline-block;
+            cursor: help;
+            border-bottom: 1px dashed #ca5590;
+        }
+        .canonical-badge {
+            background: #2600fb30;
+            border-radius: 2rem;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.7rem;
+            margin-left: 0.8rem;
+            display: inline-block;
+        }
+        .breadcrumbs {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+        .breadcrumb-sep {
+            color: #ca5590;
+            margin: 0 0.3rem;
+        }
+        .synonyms-list {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.3rem;
+        }
+
+        /* emerging skill item */
+        .emerging-item {
+            background: #0f172a;
+            border-radius: 1rem;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
+            border-right: 2px solid #ca5590;
+        }
+        .emerging-skill {
+            font-weight: 700;
+            color: #ca5590;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+            flex-wrap: wrap;
+        }
+        .btn-sm {
+            background: #2600fb;
+            border: none;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-sm:hover {
+            background: #ca5590;
+        }
+        .btn-ignore {
+            background: #334155;
+        }
+        .btn-ignore:hover {
+            background: #dc2626;
+        }
+        select {
+            background: #1e2a3e;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+            color: white;
+        }
+
+        /* tooltip (custom) */
+        .tooltip-content {
+            visibility: hidden;
+            background-color: #2600fb;
+            color: white;
+            text-align: left;
+            border-radius: 0.75rem;
+            padding: 0.5rem 0.8rem;
+            position: absolute;
+            z-index: 20;
+            bottom: 125%;
+            left: 0;
+            white-space: nowrap;
+            font-size: 0.7rem;
+            font-weight: normal;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .skill-name-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .skill-name-wrapper:hover .tooltip-content {
+            visibility: visible;
+        }
+
+        /* empty state */
+        .empty-msg {
+            color: #6c7a8e;
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.8rem;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #6c7a8e;
+        }
+
+        @media (max-width: 800px) {
+            body { padding: 1rem; }
+            .two-columns { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <h1><i class="fas fa-tags"></i> Skill Normalization & Taxonomy Visualizer</h1>
+            <p>Mapping breadcrumbs · Synonym tooltips · Emerging skill inbox</p>
+        </div>
+        <div class="badge"><i class="fas fa-robot"></i> Normalization Agent · v2.3</div>
+    </div>
+
+    <div class="two-columns">
+        <!-- LEFT: Normalized Skills with breadcrumbs & tooltips -->
+        <div class="normalized-skills">
+            <div class="card">
+                <h3><i class="fas fa-check-circle" style="color:#ca5590;"></i> Normalized Skills (Canonical + Hierarchy)</h3>
+                <p style="font-size: 0.75rem; margin-bottom: 1rem;">Hover over a skill to see raw synonyms & original form</p>
+                <div id="normalizedSkillsList">
+                    <!-- dynamic content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Emerging Skills Inbox -->
+        <div class="emerging-inbox">
+            <div class="card">
+                <h3><i class="fas fa-inbox" style="color:#ca5590;"></i> Emerging Skills Inbox</h3>
+                <p style="font-size: 0.75rem; margin-bottom: 1rem;">Skills not in taxonomy – approve to add & categorize</p>
+                <div id="emergingSkillsList">
+                    <!-- dynamic content -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>⚡ Agent maps raw terms → canonical · Flags unknown skills for human review · Click approve to expand taxonomy</footer>
+</div>
+
+<script>
+    // ---------- MOCK DATA: Normalized Skills (after agent processing) ----------
+    let normalizedSkills = [
+        {
+            raw: "React.js",
+            canonical: "React",
+            hierarchy: ["Frontend", "JavaScript Libraries", "React"],
+            synonyms: ["ReactJS", "React.js", "React Js"],
+            category: "Frontend"
+        },
+        {
+            raw: "K8s",
+            canonical: "Kubernetes",
+            hierarchy: ["DevOps", "Container Orchestration", "Kubernetes"],
+            synonyms: ["k8s", "K8s", "Kubernetes"],
+            category: "DevOps"
+        },
+        {
+            raw: "ML Engineering",
+            canonical: "Machine Learning Engineering",
+            hierarchy: ["AI/ML", "Engineering", "Machine Learning Engineering"],
+            synonyms: ["ML Eng", "Machine Learning Eng", "ML Engineering"],
+            category: "AI/ML"
+        },
+        {
+            raw: "PyTorch",
+            canonical: "PyTorch",
+            hierarchy: ["AI/ML", "Deep Learning", "PyTorch"],
+            synonyms: ["PyTorch", "PT"],
+            category: "AI/ML"
+        }
+    ];
+
+    // Emerging skills (not in taxonomy, flagged by agent)
+    let emergingSkills = [
+        { raw: "GraphQL", suggestedCategory: "API", synonyms: ["GraphQL", "Graph QL"] },
+        { raw: "Rust", suggestedCategory: "Programming Languages", synonyms: ["Rust lang"] }
+    ];
+
+    // Helper: render normalized skills list
+    function renderNormalizedSkills() {
+        const container = document.getElementById('normalizedSkillsList');
+        if (normalizedSkills.length === 0) {
+            container.innerHTML = '<div class="empty-msg"><i class="fas fa-info-circle"></i> No normalized skills yet. Approve emerging skills to add them.</div>';
+            return;
+        }
+        container.innerHTML = normalizedSkills.map(skill => `
+            <div class="skill-card">
+                <div class="skill-name-wrapper">
+                    <span class="skill-name">${skill.canonical}</span>
+                    <div class="tooltip-content">
+                        <strong>📝 Raw form:</strong> ${skill.raw}<br>
+                        <strong>🔗 Synonyms recognized:</strong> ${skill.synonyms.join(', ')}
+                    </div>
+                </div>
+                <span class="canonical-badge"><i class="fas fa-code-branch"></i> Canonical</span>
+                <div class="breadcrumbs">
+                    ${skill.hierarchy.map((item, idx) => `
+                        <span>${item}</span>${idx < skill.hierarchy.length-1 ? '<span class="breadcrumb-sep">→</span>' : ''}
+                    `).join('')}
+                </div>
+                <div class="synonyms-list">
+                    <i class="fas fa-language"></i> Synonyms: ${skill.synonyms.join(', ')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Render emerging skills inbox
+    function renderEmergingSkills() {
+        const container = document.getElementById('emergingSkillsList');
+        if (emergingSkills.length === 0) {
+            container.innerHTML = '<div class="empty-msg"><i class="fas fa-check-circle"></i> Inbox empty – all skills recognized!</div>';
+            return;
+        }
+        container.innerHTML = emergingSkills.map((skill, idx) => `
+            <div class="emerging-item" data-idx="${idx}">
+                <div class="emerging-skill"><i class="fas fa-question-circle"></i> ${skill.raw}</div>
+                <div style="font-size:0.7rem; margin: 0.3rem 0;">🔍 Suggested category: ${skill.suggestedCategory}</div>
+                <div class="action-buttons">
+                    <select id="catSelect-${idx}" class="category-select">
+                        <option value="Frontend">Frontend</option>
+                        <option value="Backend">Backend</option>
+                        <option value="DevOps">DevOps</option>
+                        <option value="AI/ML">AI/ML</option>
+                        <option value="Programming Languages">Programming Languages</option>
+                        <option value="Database">Database</option>
+                    </select>
+                    <button class="btn-sm approve-btn" data-idx="${idx}"><i class="fas fa-check"></i> Approve & Add</button>
+                    <button class="btn-sm btn-ignore ignore-btn" data-idx="${idx}"><i class="fas fa-times"></i> Ignore</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Attach event listeners for approve/ignore
+        document.querySelectorAll('.approve-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = btn.getAttribute('data-idx');
+                approveSkill(idx);
+            });
+        });
+        document.querySelectorAll('.ignore-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = btn.getAttribute('data-idx');
+                ignoreSkill(idx);
+            });
+        });
+    }
+
+    // Approve: add emerging skill to normalized list with custom category and default hierarchy
+    function approveSkill(index) {
+        const skill = emergingSkills[index];
+        const selectedCategory = document.getElementById(`catSelect-${index}`).value;
+        // Build a hierarchy based on selected category
+        let hierarchy = [];
+        if (selectedCategory === "Frontend") hierarchy = ["Frontend", "Web Technologies", skill.raw];
+        else if (selectedCategory === "Backend") hierarchy = ["Backend", "Server Technologies", skill.raw];
+        else if (selectedCategory === "DevOps") hierarchy = ["DevOps", "Infrastructure", skill.raw];
+        else if (selectedCategory === "AI/ML") hierarchy = ["AI/ML", "Machine Learning", skill.raw];
+        else if (selectedCategory === "Programming Languages") hierarchy = ["Programming Languages", "Modern Languages", skill.raw];
+        else hierarchy = [selectedCategory, "General", skill.raw];
+        
+        const newNormalized = {
+            raw: skill.raw,
+            canonical: skill.raw,  // use raw as canonical for new skill
+            hierarchy: hierarchy,
+            synonyms: skill.synonyms,
+            category: selectedCategory
+        };
+        normalizedSkills.push(newNormalized);
+        // remove from emerging
+        emergingSkills.splice(index, 1);
+        // re-render both lists
+        renderNormalizedSkills();
+        renderEmergingSkills();
+        // optional toast effect (simple)
+        showToast(`✅ "${skill.raw}" added to taxonomy under ${selectedCategory}`);
+    }
+
+    function ignoreSkill(index) {
+        const removed = emergingSkills.splice(index, 1)[0];
+        renderEmergingSkills();
+        showToast(`⏸️ Ignored "${removed.raw}" – it will not appear in normalized skills.`);
+    }
+
+    // Simple toast notification (vanilla)
+    function showToast(message) {
+        let toast = document.createElement('div');
+        toast.innerText = message;
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.backgroundColor = '#2600fb';
+        toast.style.color = 'white';
+        toast.style.padding = '0.6rem 1.2rem';
+        toast.style.borderRadius = '2rem';
+        toast.style.fontSize = '0.8rem';
+        toast.style.zIndex = '1000';
+        toast.style.backdropFilter = 'blur(8px)';
+        toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        document.body.appendChild(toast);
+        setTimeout(() => { toast.remove(); }, 2500);
+    }
+
+    // initial render
+    renderNormalizedSkills();
+    renderEmergingSkills();
+</script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>API Management & Developer Portal | TalentIntel AI</title>
+    <!-- Google Fonts + Font Awesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Swagger UI CSS + JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui.css">
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.11.0/swagger-ui-bundle.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #161d30;
+            font-family: 'Inter', sans-serif;
+            color: #eef2ff;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* glassmorphism cards */
+        .card {
+            background: rgba(22, 29, 48, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(38, 0, 251, 0.3);
+            padding: 1.5rem;
+            transition: all 0.2s;
+            height: 100%;
+        }
+
+        .card:hover {
+            border-color: #ca5590;
+            box-shadow: 0 8px 20px rgba(202, 85, 144, 0.2);
+        }
+
+        /* header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff, #ca5590);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .badge {
+            background: #2600fb20;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            font-size: 0.8rem;
+        }
+        .api-key-input {
+            background: #0f172a;
+            border: 1px solid #2600fb;
+            border-radius: 2rem;
+            padding: 0.4rem 1rem;
+            color: white;
+            font-family: monospace;
+        }
+
+        /* 3-column layout for quotas */
+        .quotas-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .quota-card {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+        }
+        .gauge {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 0.5rem;
+        }
+        .gauge-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .quota-label {
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .quota-value {
+            font-size: 0.8rem;
+            color: #ca5590;
+        }
+
+        /* two column layout for Swagger + Webhook Logs */
+        .two-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+        .swagger-container {
+            flex: 2;
+            min-width: 300px;
+        }
+        .webhook-container {
+            flex: 1.2;
+            min-width: 280px;
+        }
+
+        /* webhook table */
+        .webhook-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .webhook-table th, .webhook-table td {
+            padding: 0.6rem 0.4rem;
+            text-align: left;
+            border-bottom: 1px solid #2600fb30;
+        }
+        .webhook-table th {
+            color: #ca5590;
+            font-weight: 600;
+        }
+        .status-success {
+            color: #7ec555;
+        }
+        .status-failed {
+            color: #dc2626;
+        }
+        .status-pending {
+            color: #facc15;
+        }
+        .payload-preview {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+        .badge-sm {
+            background: #2600fb30;
+            border-radius: 1rem;
+            padding: 0.1rem 0.5rem;
+            font-size: 0.7rem;
+        }
+
+        /* Swagger custom overrides to match dark theme */
+        .swagger-ui {
+            --swagger-ui-theme-color: #2600fb;
+        }
+        .swagger-ui .topbar {
+            display: none;
+        }
+        .swagger-ui .information-container {
+            display: none;
+        }
+        .swagger-ui .scheme-container {
+            background: transparent;
+            box-shadow: none;
+        }
+        .swagger-ui .btn {
+            border-color: #2600fb;
+            color: #2600fb;
+        }
+        .swagger-ui .btn.execute {
+            background-color: #2600fb;
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.7rem;
+            color: #6c7a8e;
+        }
+        @media (max-width: 800px) {
+            body { padding: 1rem; }
+            .quotas-grid { flex-direction: column; align-items: center; }
+            .two-columns { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <h1><i class="fas fa-code"></i> API Management & Developer Portal</h1>
+            <p>Interactive Swagger · Webhook Logs · Usage Quotas</p>
+        </div>
+        <div>
+            <span class="api-key-input"><i class="fas fa-key"></i> Demo API Key: pk_live_abc123def</span>
+            <span class="badge"><i class="fas fa-shield-alt"></i> Rate Limit: 1000/hr</span>
+        </div>
+    </div>
+
+    <!-- Usage Quotas (gauges) -->
+    <div class="quotas-grid">
+        <div class="card quota-card">
+            <div class="gauge">
+                <canvas id="gaugeRequests" width="120" height="120" class="gauge-canvas"></canvas>
+            </div>
+            <div class="quota-label">API Requests (hourly)</div>
+            <div class="quota-value">684 / 1000 used</div>
+            <div class="badge-sm" style="margin-top:0.3rem;">Resets in 23 min</div>
+        </div>
+        <div class="card quota-card">
+            <div class="gauge">
+                <canvas id="gaugeBatch" width="120" height="120" class="gauge-canvas"></canvas>
+            </div>
+            <div class="quota-label">Concurrent Batch Jobs</div>
+            <div class="quota-value">3 / 10 active</div>
+            <div class="badge-sm">5 queued</div>
+        </div>
+        <div class="card quota-card">
+            <div class="gauge">
+                <canvas id="gaugeDaily" width="120" height="120" class="gauge-canvas"></canvas>
+            </div>
+            <div class="quota-label">Daily Quota</div>
+            <div class="quota-value">2,456 / 5,000</div>
+            <div class="badge-sm">49% remaining</div>
+        </div>
+    </div>
+
+    <div class="two-columns">
+        <!-- Interactive Swagger/OpenAPI -->
+        <div class="swagger-container card">
+            <h3><i class="fas fa-swagger" style="color:#ca5590;"></i> Interactive API Docs (OpenAPI)</h3>
+            <p style="font-size: 0.75rem; margin-bottom: 1rem;">Test endpoints live – use API key "demo-key-123" in Authorize</p>
+            <div id="swagger-ui"></div>
+        </div>
+
+        <!-- Webhook Logs -->
+        <div class="webhook-container card">
+            <h3><i class="fas fa-webhook" style="color:#ca5590;"></i> Webhook Delivery Logs</h3>
+            <p style="font-size: 0.75rem; margin-bottom: 1rem;">Async batch job callbacks</p>
+            <div style="overflow-x: auto;">
+                <table class="webhook-table">
+                    <thead>
+                        <tr><th>Job ID</th><th>Callback URL</th><th>Status</th><th>Response</th><th>Time</th></tr>
+                    </thead>
+                    <tbody id="webhookLogsBody">
+                        <!-- dynamic rows -->
+                    </tbody>
+                </table>
+            </div>
+            <button id="refreshWebhooks" class="btn-sm" style="margin-top:1rem; background:#2600fb;"><i class="fas fa-sync-alt"></i> Refresh Logs</button>
+        </div>
+    </div>
+    <footer>⚡ Full OpenAPI specification · Webhook retries with exponential backoff · Rate limiting per API key</footer>
+</div>
+
+<script>
+    // ---------- Usage Gauges (canvas circles) ----------
+    function drawGauge(canvasId, percent, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width, height = canvas.height;
+        const centerX = width/2, centerY = height/2;
+        const radius = width * 0.4;
+        const startAngle = -0.5 * Math.PI;
+        const endAngle = startAngle + (2 * Math.PI * percent);
+        
+        ctx.clearRect(0, 0, width, height);
+        // background circle
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        // foreground
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        // inner text
+        ctx.fillStyle = '#eef2ff';
+        ctx.font = 'bold 18px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${Math.round(percent*100)}%`, centerX, centerY);
+    }
+    
+    // mock data for gauges
+    const requestPercent = 684/1000;
+    const batchPercent = 3/10;
+    const dailyPercent = 2456/5000;
+    drawGauge('gaugeRequests', requestPercent, '#2600fb');
+    drawGauge('gaugeBatch', batchPercent, '#ca5590');
+    drawGauge('gaugeDaily', dailyPercent, '#7ec555');
+    
+    // ---------- Webhook Logs (mock data) ----------
+    let webhookLogs = [
+        { jobId: "batch_1a2b3c", callbackUrl: "https://api.mycompany.com/webhook", status: "success", response: "HTTP 200 OK", timestamp: "2025-03-15 10:32:45" },
+        { jobId: "batch_4d5e6f", callbackUrl: "https://webhook.site/abc123", status: "failed", response: "Timeout after 30s", timestamp: "2025-03-15 09:15:22" },
+        { jobId: "batch_7g8h9i", callbackUrl: "https://hooks.slack.com/xyz", status: "pending", response: "Retrying in 5s", timestamp: "2025-03-15 11:00:03" },
+        { jobId: "batch_0j1k2l", callbackUrl: "https://api.mycompany.com/v2/callback", status: "success", response: "HTTP 202 Accepted", timestamp: "2025-03-14 22:10:17" }
+    ];
+    
+    function renderWebhookLogs() {
+        const tbody = document.getElementById('webhookLogsBody');
+        tbody.innerHTML = webhookLogs.map(log => `
+            <tr>
+                <td><code>${log.jobId}</code></td>
+                <td class="payload-preview" title="${log.callbackUrl}">${log.callbackUrl.substring(0, 30)}...</td>
+                <td class="status-${log.status}">${log.status}</td>
+                <td class="payload-preview" title="${log.response}">${log.response.substring(0, 25)}</td>
+                <td>${log.timestamp}</td>
+            </tr>
+        `).join('');
+    }
+    renderWebhookLogs();
+    
+    document.getElementById('refreshWebhooks').addEventListener('click', () => {
+        // simulate new log entry
+        const newLog = {
+            jobId: "batch_" + Math.random().toString(36).substr(2, 6),
+            callbackUrl: "https://example.com/webhook",
+            status: ["success", "failed", "pending"][Math.floor(Math.random()*3)],
+            response: "Mock response",
+            timestamp: new Date().toLocaleString()
+        };
+        webhookLogs.unshift(newLog);
+        if (webhookLogs.length > 6) webhookLogs.pop();
+        renderWebhookLogs();
+    });
+    
+    // ---------- Swagger UI (mock OpenAPI spec) ----------
+    const openapiSpec = {
+        openapi: "3.0.0",
+        info: {
+            title: "TalentIntel AI API",
+            version: "1.0.0",
+            description: "Multi-Agent Resume Parsing & Matching"
+        },
+        servers: [{ url: "https://api.talentintel.ai/v1", description: "Production" }],
+        components: {
+            securitySchemes: {
+                ApiKeyAuth: { type: "apiKey", in: "header", name: "X-API-Key" }
+            }
+        },
+        security: [{ ApiKeyAuth: [] }],
+        paths: {
+            "/api/v1/match": {
+                post: {
+                    summary: "Semantic skill matching",
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": {
+                                schema: {
+                                    type: "object",
+                                    properties: {
+                                        candidate_id: { type: "string", example: "cand_123" },
+                                        job_description: { type: "string", example: "Looking for React, Python, AWS..." },
+                                        threshold: { type: "number", example: 0.7 }
+                                    },
+                                    required: ["candidate_id", "job_description"]
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        "200": {
+                            description: "Match score + gap analysis",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            match_score: { type: "number" },
+                                            gap_analysis: { type: "object" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/parse": {
+                post: {
+                    summary: "Upload and parse resume",
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "multipart/form-data": {
+                                schema: { type: "object", properties: { file: { type: "string", format: "binary" } } }
+                            }
+                        }
+                    },
+                    responses: { "200": { description: "Extracted candidate profile" } }
+                }
+            },
+            "/api/v1/parse/batch": {
+                post: {
+                    summary: "Start batch processing",
+                    responses: { "202": { description: "Job ID returned" } }
+                }
+            }
+        }
+    };
+    
+    window.onload = () => {
+        SwaggerUIBundle({
+            spec: openapiSpec,
+            dom_id: '#swagger-ui',
+            presets: [SwaggerUIBundle.presets.apis],
+            layout: "BaseLayout",
+            requestInterceptor: (req) => {
+                // add demo API key for testing
+                req.headers['X-API-Key'] = 'demo-key-123';
+                return req;
+            }
+        });
+    };
+    
+    // Simulate real-time quota updates (optional)
+    setInterval(() => {
+        // just to show dynamism – update request count mock
+        const newPercent = (Math.random() * 0.1) + 0.68; // between 68-78%
+        drawGauge('gaugeRequests', newPercent, '#2600fb');
+        document.querySelector('.quota-card:first-child .quota-value').innerHTML = `${Math.round(newPercent*1000)} / 1000 used`;
+    }, 10000);
+</script>
+</body>
+</html>
