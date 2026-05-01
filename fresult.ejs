@@ -1,0 +1,28 @@
+<html>
+    <body>
+        <head>
+            <h2>marks details</h2>
+        </head>
+        <table border="3px">
+            <tr>
+                <th>t1</th>
+                <th>t2</th>
+                <th>t3</th>
+                <th>t4</th>
+            </tr>
+            <tr>
+                <td><%=t1%></td>
+                <td><%=t2%></td>
+                <td><%=t3%></td>
+                <td><%=t4%></td>
+            </tr>
+        </table>
+        <p>total:<%=total%></p>
+        <%if(total>35){%>
+            <p>Pass</p>
+        <%}else{%>
+            <p>Fail</p>
+            <%}%>
+        
+    </body>
+</html>
